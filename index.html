@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BSMP TRANSLATOR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #121212, #1f1f1f);
+  font-family: 'Montserrat', sans-serif;
+  color: #eee;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: hidden;
+  padding-top: 50px; /* Para no tapar contenido con HUD */
+}
+
+/* HUD fijo arriba para estado */
+#hudStatus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #00c8ffdd;
+  color: #111;
+  font-weight: 700;
+  font-size: 1.3rem;
+  text-align: center;
+  padding: 12px 0;
+  z-index: 9999;
+  font-family: 'Montserrat', sans-serif;
+  user-select: none;
+  box-shadow: 0 3px 10px #00c8ff88;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition: background-color 0.3s ease;
+}
+
+#hudStatus.error {
+  background: #ff3b3bdd;
+  color: #fff;
+}
+
+/* Contenedor principal */
+header {
+  padding: 40px 20px 10px 20px;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 2.8rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(255,255,255,0.2);
+}
+
+.container {
+  background: rgba(30, 30, 30, 0.9);
+  border-radius: 16px;
+  padding: 20px 20px 20px 20px;
+  max-width: 480px;
+  width: 95vw;
+  max-height: 85vh;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+label {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+  color: #ddd;
+}
+
+input[type="text"],
+select {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 1.1rem;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+  font-weight: 500;
+  color: #111;
+  background: #eee;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+input[type="text"]:focus,
+select:focus {
+  box-shadow: inset 0 2px 12px #00c8ff;
+}
+
+textarea {
+  width: 100%;
+  min-height: 150px;
+  max-height: 50vh;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  font-size: 1.2rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #f0f0f0;
+  background-color: #121212;
+  resize: vertical;
+  box-shadow: inset 0 3px 12px rgba(255, 255, 255, 0.1);
+  overflow-y: auto;
+  transition: box-shadow 0.3s ease;
+  font-family: 'Montserrat', sans-serif;
+  flex-grow: 1;
+}
+
+textarea::placeholder {
+  color: #888;
+  opacity: 1;
+}
+
+textarea:focus {
+  box-shadow: inset 0 3px 15px #00c8ff;
+  outline: none;
+  background-color: #1a1a1a;
+}
+
+button {
+  background: #00c8ff;
+  border: none;
+  padding: 16px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border-radius: 22px;
+  color: #111;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  box-shadow: 0 8px 22px rgba(0, 200, 255, 0.85);
+  font-family: 'Montserrat', sans-serif;
+}
+
+button:hover {
+  background: #0099cc;
+}
+
+footer {
+  margin-top: auto;
+  padding: 15px 0;
+  color: #888;
+  font-weight: 600;
+  font-size: 1rem;
+  user-select: none;
+  font-family: 'Montserrat', sans-serif;
+}
+
+@media (max-width: 600px) {
+  body {
+    overflow-y: auto;
+    padding-top: 60px;
+  }
+  header h1 {
+    font-size: 2.2rem;
+  }
+  .container {
+    max-width: 98vw;
+    padding: 15px 15px;
+    max-height: 90vh;
+  }
+  textarea {
+    min-height: 120px;
+    max-height: 60vh;
+    font-size: 1.15rem;
+    padding: 12px;
+  }
+  button {
+    font-size: 1.25rem;
+    padding: 14px 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- HUD de estado -->
+<div id="hudStatus">Esperando para iniciar...</div>
+
+<header>
+  <h1> Traductor BSMP</h1>
+</header>
+
+<div class="container">
+  <label for="username_es">Nombre hablante Español</label>
+  <input type="text" id="username_es" placeholder="Nombre para español" />
+
+  <label for="username_en">Nombre hablante Inglés</label>
+  <input type="text" id="username_en" placeholder="Name for English" />
+
+  <label>Modo de Traducción</label>
+  <select id="modeSelect">
+    <option value="unidirectional" selected>Unidireccional (elige idioma origen y destino)</option>
+    <option value="bilingual">Bilingüe (detecta y traduce ambos idiomas simultáneamente)</option>
+  </select>
+
+  <div id="unidirectionalOptions">
+    <label for="sourceLang">Idioma que hablas</label>
+    <select id="sourceLang">
+      <option value="es-ES">Español</option>
+      <option value="en-US">Inglés</option>
+      <option value="fr-FR">Francés</option>
+      <option value="de-DE">Alemán</option>
+      <option value="it-IT">Italiano</option>
+      <option value="pt-PT">Portugués</option>
+      <option value="ja-JP">Japonés</option>
+      <option value="ko-KR">Coreano</option>
+    </select>
+
+    <label for="targetLang">Idioma a traducir</label>
+    <select id="targetLang">
+      <option value="es">Español</option>
+      <option value="en">Inglés</option>
+      <option value="fr">Francés</option>
+      <option value="de">Alemán</option>
+      <option value="it">Italiano</option>
+      <option value="pt">Portugués</option>
+      <option value="ja">Japonés</option>
+      <option value="ko">Coreano</option>
+    </select>
+  </div>
+
+  <label for="ttsToggle">Modo de Voz</label>
+  <select id="ttsToggle">
+    <option value="on">Con voz</option>
+    <option value="off" selected>Sin voz</option>
+  </select>
+
+  <button id="startBtn">Iniciar reconocimiento</button>
+
+  <textarea id="outputText" placeholder="La traducción aparecerá aquí..." readonly></textarea>
+</div>
+
+<footer>
+  brauustudios © 2025
+</footer>
+
+<script>
+const startBtn = document.getElementById('startBtn');
+const hudStatus = document.getElementById('hudStatus');
+const outputText = document.getElementById('outputText');
+const sourceLangSelect = document.getElementById('sourceLang');
+const targetLangSelect = document.getElementById('targetLang');
+const modeSelect = document.getElementById('modeSelect');
+const unidirectionalOptions = document.getElementById('unidirectionalOptions');
+const ttsToggle = document.getElementById('ttsToggle');
+
+const usernameEsInput = document.getElementById('username_es');
+const usernameEnInput = document.getElementById('username_en');
+
+let recognition;
+let recognizing = false;
+let currentLang = 'es-ES';
+let bilingualActive = false;
+let userConfirmedStart = false;
+
+modeSelect.addEventListener('change', () => {
+  unidirectionalOptions.style.display = modeSelect.value === 'unidirectional' ? 'block' : 'none';
+});
+
+unidirectionalOptions.style.display = modeSelect.value === 'unidirectional' ? 'block' : 'none';
+
+if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+  hudStatus.textContent = "Tu navegador no soporta reconocimiento de voz.";
+  startBtn.disabled = true;
+} else {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.interimResults = false;
+
+  function logStatus(msg, isError = false) {
+    hudStatus.textContent = msg;
+    if (isError) {
+      hudStatus.classList.add('error');
+    } else {
+      hudStatus.classList.remove('error');
+    }
+  }
+
+  recognition.onerror = (event) => {
+    console.error(event.error);
+    switch(event.error) {
+      case 'no-speech':
+        logStatus("No se detectó voz. Intenta de nuevo.", true);
+        break;
+      case 'network':
+        logStatus("Error de red. Revisa tu conexión.", true);
+        break;
+      case 'not-allowed':
+        logStatus("Permiso denegado para usar el micrófono.", true);
+        break;
+      default:
+        logStatus("Error: " + event.error, true);
+    }
+    recognizing = false;
+    startBtn.textContent = "Iniciar reconocimiento";
+    enableControls(true);
+    if (bilingualActive && userConfirmedStart) {
+      setTimeout(() => {
+        recognition.start();
+      }, 2000);
+    }
+  };
+
+  recognition.onstart = () => {
+    recognizing = true;
+    startBtn.textContent = "Detener reconocimiento";
+    enableControls(false);
+    if (bilingualActive) {
+      logStatus(`Modo bilingüe: escuchando en ${currentLang === 'es-ES' ? 'Español' : 'Inglés'}`);
+    } else {
+      let idioma = sourceLangSelect.options[sourceLangSelect.selectedIndex].text;
+      logStatus(`Escuchando en ${idioma}...`);
+    }
+  };
+
+  recognition.onend = () => {
+    recognizing = false;
+    startBtn.textContent = "Iniciar reconocimiento";
+
+    if (bilingualActive && userConfirmedStart) {
+      currentLang = (currentLang === 'es-ES') ? 'en-US' : 'es-ES';
+      recognition.lang = currentLang;
+      logStatus(`Modo bilingüe: cambiando a ${currentLang === 'es-ES' ? 'Español' : 'Inglés'}`);
+      setTimeout(() => {
+        recognition.start();
+        recognizing = true;
+        startBtn.textContent = "Detener reconocimiento";
+        enableControls(false);
+      }, 2000);
+    } else if (!bilingualActive && userConfirmedStart) {
+      setTimeout(() => {
+        recognition.start();
+        recognizing = true;
+      }, 2000);
+    } else {
+      enableControls(true);
+      logStatus("Reconocimiento detenido.");
+      userConfirmedStart = false;
+    }
+  };
+
+  recognition.onresult = (event) => {
+    let transcriptArr = [];
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        transcriptArr.push(event.results[i][0].transcript.trim());
+      }
+    }
+    if (transcriptArr.length === 0) return;
+
+    let transcript = transcriptArr[transcriptArr.length - 1];
+
+    if (!bilingualActive) {
+      translateText(transcript, targetLangSelect.value)
+      .then(translated => {
+        if (translated.startsWith("❗ Error")) {
+          outputText.value += `❗ Error de traducción: "${transcript}"\n\n`;
+          logStatus("Error en la traducción. Revisa tu conexión o intenta más tarde.", true);
+          return;
+        }
+
+        let userName = (sourceLangSelect.value === 'es-ES') ? usernameEsInput.value.trim() || "Usuario ES" : usernameEnInput.value.trim() || "User EN";
+        outputText.value += `${userName} (${sourceLangSelect.value.substring(0,2).toUpperCase()}): ${transcript}\n→ ${translated}\n\n`;
+        outputText.scrollTop = outputText.scrollHeight;
+
+        if (ttsToggle.value === "on") {
+          window.speechSynthesis.cancel();
+          speakTranslated(translated, targetLangSelect.value);
+        }
+      });
+    } else {
+      let userName = currentLang === 'es-ES' ? usernameEsInput.value.trim() || "Usuario ES" : usernameEnInput.value.trim() || "User EN";
+      let fromLang = currentLang === 'es-ES' ? 'es' : 'en';
+      let toLang = currentLang === 'es-ES' ? 'en' : 'es';
+
+      outputText.value += `${userName} (${fromLang.toUpperCase()}): ${transcript}\n`;
+
+      translateText(transcript, toLang)
+      .then(translated => {
+        if (translated.startsWith("❗ Error")) {
+          outputText.value += `❗ Error de traducción\n\n`;
+          logStatus("Error en la traducción. Revisa tu conexión o intenta más tarde.", true);
+          return;
+        }
+
+        outputText.value += `→ ${translated}\n\n`;
+        outputText.scrollTop = outputText.scrollHeight;
+
+        if (ttsToggle.value === "on") {
+          window.speechSynthesis.cancel();
+          speakTranslated(translated, toLang);
+        }
+      });
+    }
+  };
+
+  startBtn.addEventListener('click', () => {
+    if (recognizing) {
+      recognition.stop();
+      recognizing = false;
+      bilingualActive = false;
+      userConfirmedStart = false;
+      startBtn.textContent = "Iniciar reconocimiento";
+      enableControls(true);
+      logStatus("Reconocimiento detenido por usuario.");
+    } else {
+      if (!userConfirmedStart) {
+        if (!confirm("¿Quieres empezar a hablar? / Do you want to start speaking?")) {
+          logStatus("Inicio cancelado por usuario.");
+          return;
+        }
+        userConfirmedStart = true;
+      }
+
+      outputText.value = "";
+      const mode = modeSelect.value;
+      bilingualActive = (mode === 'bilingual');
+
+      if (bilingualActive) {
+        currentLang = 'es-ES';
+        recognition.lang = currentLang;
+        recognition.continuous = false;
+        logStatus("Modo bilingüe activado, iniciando en español...");
+      } else {
+        recognition.lang = sourceLangSelect.value;
+        recognition.continuous = true;
+        logStatus("Modo unidireccional activado (subtítulos).");
+      }
+
+      recognition.start();
+      recognizing = true;
+      startBtn.textContent = "Detener reconocimiento";
+      enableControls(false);
+    }
+  });
+
+  function enableControls(enabled) {
+    sourceLangSelect.disabled = !enabled;
+    targetLangSelect.disabled = !enabled;
+    modeSelect.disabled = !enabled;
+    usernameEsInput.disabled = !enabled;
+    usernameEnInput.disabled = !enabled;
+    ttsToggle.disabled = !enabled;
+  }
+
+  async function translateText(text, target) {
+    try {
+      let sourceCode = "en";
+      if (!bilingualActive) {
+        sourceCode = sourceLangSelect.value.substring(0,2);
+      }
+      if (sourceCode === target) {
+        if(target === "es") sourceCode = "en";
+        else sourceCode = "es";
+      }
+      const langpair = `${sourceCode}|${target}`;
+
+      const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
+      const data = await res.json();
+
+      if (!data.responseData || !data.responseData.translatedText) {
+        return "❗ Error: No se pudo traducir. Revisa tu conexión o intenta más tarde.";
+      }
+
+      // Filtrar traducciones erróneas simples (demasiado cortas o iguales)
+      let translatedText = data.responseData.translatedText.trim();
+
+      if (
+        translatedText.toLowerCase() === text.toLowerCase() || 
+        translatedText.length < 2 ||
+        /[!@#$%^&*()_+=\[\]{};:'"\\|,.<>/?-]/.test(translatedText) // solo símbolos
+      ) {
+        return "❗ Error: Traducción no válida. Intenta de nuevo.";
+      }
+
+      return translatedText;
+    } catch {
+      return "❗ Error: No se pudo traducir. Revisa tu conexión o intenta más tarde.";
+    }
+  }
+
+  function speakTranslated(text, langCode) {
+    if (!window.speechSynthesis) {
+      logStatus("Tu navegador no soporta síntesis de voz.", true);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    switch(langCode) {
+      case 'en': utterance.lang = 'en-US'; break;
+      case 'es': utterance.lang = 'es-ES'; break;
+      case 'fr': utterance.lang = 'fr-FR'; break;
+      case 'de': utterance.lang = 'de-DE'; break;
+      case 'it': utterance.lang = 'it-IT'; break;
+      case 'pt': utterance.lang = 'pt-PT'; break;
+      case 'ja': utterance.lang = 'ja-JP'; break;
+      case 'ko': utterance.lang = 'ko-KR'; break;
+      default: utterance.lang = 'en-US'; break;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    const voiceMatch = voices.find(voice => voice.lang === utterance.lang);
+    if (voiceMatch) utterance.voice = voiceMatch;
+
+    window.speechSynthesis.speak(utterance);
+  }
+}
+</script>
+
+</body>
+</html>
